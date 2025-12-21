@@ -1,0 +1,418 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Glog.AI",
+          "organization": "Glog.AI",
+          "fullName": "Glog, Making software more secure",
+          "version": "1.0.0",
+          "semanticVersion": "1.0.0",
+          "informationUri": "https://www.glog.ai",
+          "rules": [
+            {
+              "id": "1540c9d6-a53a-3331-8538-178899f69568",
+              "name": "Problematic C function detected (malloc)",
+              "helpUri": "https://www.glog.ai/",
+              "help": {
+                "text": "",
+                "markdown": "This finding is classified as 'High Risk' because the calloc call uses a product expression (1 * size) for the allocation size, and there are no zero guards or overflow guards present. The absence of a cast, null guard, or any ownership/escape pattern further increases the risk. The call verdict is 'GENUINE', confirming that this is a high-confidence, actionable issue. The main concern is that if 'size' is large, the multiplication could overflow, resulting in a smaller-than-expected allocation and potential buffer overflows or memory corruption.\n\n## In Context Remediation\nTo prevent allocation size overflow, always check that the multiplication of the number of elements and the size of each element does not overflow before calling `calloc`. In this case, since the call is `calloc(1, size)`, ensure that `size` is a reasonable, non-zero, and non-negative value, and that it does not exceed a safe maximum (such as `SIZE_MAX`).\n\n**Remediation Example:**\n\n```c\n#include <limits.h>\n#include <stddef.h>\n\nif (size > 0 && size <= SIZE_MAX) {\n    void *ptr = calloc(1, size);\n    if (ptr == NULL) {\n        // Handle allocation failure\n    }\n    // Use ptr safely\n} else {\n    // Handle invalid size\n}\n```\n\nThis check ensures that the allocation size does not exceed the maximum representable value for `size_t`, preventing integer overflow and potential buffer overflows.\n\n## References\n- [OWASP C-Based Toolchain Hardening Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/C-Based_Toolchain_Hardening_Cheat_Sheet.html)\n- [OWASP Top Ten](https://owasp.org/www-project-top-ten/)\n- [CWE-131: Incorrect Calculation of Buffer Size](https://cwe.mitre.org/data/definitions/131.html)\n- [CWE-190: Integer Overflow or Wraparound](https://cwe.mitre.org/data/definitions/190.html)\n\n\n___\n"
+              },
+              "properties": {
+                "cwe": [
+                  {
+                    "id": "CWE-131",
+                    "url": "https://cwe.mitre.org/data/definitions/131.html"
+                  },
+                  {
+                    "id": "CWE-190",
+                    "url": "https://cwe.mitre.org/data/definitions/190.html"
+                  }
+                ],
+                "severity": "LOW",
+                "kind": "FAIL",
+                "tags": [
+                  "CWE-131",
+                  "CWE-190"
+                ]
+              }
+            },
+            {
+              "id": "2352e861-d814-3b7d-a6e6-181bbe9189d9",
+              "name": "Problematic C function detected (memcpy)",
+              "helpUri": "https://www.glog.ai/",
+              "help": {
+                "text": "",
+                "markdown": "This finding is considered a genuine vulnerability because the classification indicates a risk of undefined behavior due to possible null pointer dereference, and the verdict confirms it as genuine. The code copies data from a source pointer to a destination structure using a memory copy operation, but there is no explicit check to ensure that the source pointer is not null. If the source pointer is null, this will result in undefined behavior and potentially a crash. The destination is safe because it is the address of a local structure, but the source pointer may be null as there is no guard in place. The probability of this being a false positive is low because the analysis found no evidence that the source pointer is always valid, and the risk is explicitly called out in the classification.\n\n## In Context Remediation 1\nBefore performing the memory copy operation, add an explicit check to ensure that the source pointer is not null. This prevents undefined behavior if the source pointer is invalid.\n\n```c\nif (settings != NULL) {\n    memcpy(&state.settings, settings, sizeof(json_settings));\n} else {\n    // Handle error: source pointer is null\n    // For example, set default values or return an error code\n}\n```\n\n\n## In Context Remediation 2\nIf the function should never receive a null source pointer, add an assertion to catch programming errors during development. This does not protect in production, but helps during testing.\n\n```c\n#include <assert.h>\nassert(settings != NULL);\nmemcpy(&state.settings, settings, sizeof(json_settings));\n```\n\n## References\n- [OWASP C-Based Toolchain Hardening Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/C-Based_Toolchain_Hardening_Cheat_Sheet.html)\n- [CWE-476: NULL Pointer Dereference](https://cwe.mitre.org/data/definitions/476.html)\n- [OWASP Buffer Overflow](https://owasp.org/www-community/vulnerabilities/Buffer_Overflow)\n\n\n___\n"
+              },
+              "properties": {
+                "cwe": [
+                  {
+                    "id": "CWE-476",
+                    "url": "https://cwe.mitre.org/data/definitions/476.html"
+                  }
+                ],
+                "severity": "LOW",
+                "kind": "FAIL",
+                "tags": [
+                  "CWE-476"
+                ]
+              }
+            },
+            {
+              "id": "a46cb5d6-95f9-3c03-8cf2-d394290218e4",
+              "name": "Problematic C function detected (memcpy)",
+              "helpUri": "https://www.glog.ai/",
+              "help": {
+                "text": "",
+                "markdown": "This finding is classified as a genuine vulnerability because the analysis identified a risk of undefined behavior due to the possibility that the source pointer ('settings') may be null when passed to the memory copy operation. There are no explicit checks in the code to ensure that the source pointer is valid before the copy occurs. The destination is safe as it is the address of a local structure, but the absence of a null check for the source pointer means that if 'settings' is null, the program may crash or exhibit unpredictable behavior. The classification and verdict both indicate a high-confidence issue that should be addressed.\n\n## In Context Remediation\nBefore performing the memory copy, ensure that the source pointer is not null. This prevents undefined behavior if 'settings' is null.\n\n```c\nif (settings != NULL) {\n    memcpy(&state.settings, settings, sizeof(json_settings));\n} else {\n    // Handle error: settings pointer is null\n    // For example, set default values or return an error code\n}\n```\n\nThis check ensures that the memory copy only occurs when the source pointer is valid, preventing crashes or unpredictable behavior if a null pointer is passed.\n\n## References\n- [OWASP C-Based Toolchain Hardening Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/C-Based_Toolchain_Hardening_Cheat_Sheet.html)\n- [CWE-476: NULL Pointer Dereference](https://cwe.mitre.org/data/definitions/476.html)\n- [OWASP Buffer Overflow](https://owasp.org/www-community/vulnerabilities/Buffer_Overflow)\n\n\n___\n"
+              },
+              "properties": {
+                "cwe": [
+                  {
+                    "id": "CWE-476",
+                    "url": "https://cwe.mitre.org/data/definitions/476.html"
+                  }
+                ],
+                "severity": "LOW",
+                "kind": "FAIL",
+                "tags": [
+                  "CWE-476"
+                ]
+              }
+            },
+            {
+              "id": "415e9bb0-f5f6-3ff2-ae7f-b1ce7db60052",
+              "name": "Problematic C function detected (malloc)",
+              "helpUri": "https://www.glog.ai/",
+              "help": {
+                "text": "",
+                "markdown": "This finding is classified as 'High Risk' because the calloc call uses a product expression (1 * size) for the allocation size, but there are no zero guards or overflow guards present. The absence of these guards means that if 'size' is large, the multiplication could overflow, resulting in a smaller-than-expected allocation and potential memory safety issues. The call verdict is 'GENUINE', further confirming the high confidence in this being a real vulnerability. No null guard or overflow guard is present, and the allocation result is not assigned to a variable, which may indicate a logic error or memory leak. These factors all contribute to the assessment that this is a genuine, high-risk issue.\n\n## In Context Remediation\nTo prevent allocation size overflow, always check that the multiplication in the calloc call does not overflow. You can add an explicit check before the allocation to ensure that 'size' is within a safe range. For example:\n\n```c\nif (size > 0 && size <= SIZE_MAX) {\n    void *ptr = calloc(1, size);\n    if (ptr == NULL) {\n        // Handle allocation failure\n    }\n    // Use ptr safely\n} else {\n    // Handle invalid size\n}\n```\n\nThis ensures that the allocation will not overflow and that the result is checked for NULL before use. For more information, see:\n\n## References\n- [OWASP C-Based Toolchain Hardening Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/C-Based_Toolchain_Hardening_Cheat_Sheet.html)\n- [CWE-131: Incorrect Calculation of Buffer Size](https://cwe.mitre.org/data/definitions/131.html)\n- [CWE-190: Integer Overflow or Wraparound](https://cwe.mitre.org/data/definitions/190.html)\n\n\n___\n"
+              },
+              "properties": {
+                "cwe": [
+                  {
+                    "id": "CWE-131",
+                    "url": "https://cwe.mitre.org/data/definitions/131.html"
+                  },
+                  {
+                    "id": "CWE-190",
+                    "url": "https://cwe.mitre.org/data/definitions/190.html"
+                  }
+                ],
+                "severity": "LOW",
+                "kind": "FAIL",
+                "tags": [
+                  "CWE-131",
+                  "CWE-190"
+                ]
+              }
+            }
+          ],
+          "language": "en-US",
+          "contents": [
+            "localizedData",
+            "nonLocalizedData"
+          ],
+          "isComprehensive": false
+        }
+      },
+      "language": "en-US",
+      "results": [
+        {
+          "ruleId": "1540c9d6-a53a-3331-8538-178899f69568",
+          "kind": "fail",
+          "level": "note",
+          "message": {
+            "text": "Problematic C function detected (malloc)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "fuzzgoatNoVulns.c"
+                },
+                "region": {
+                  "startLine": 80,
+                  "startColumn": 36,
+                  "endLine": 80,
+                  "endColumn": 49,
+                  "charOffset": 2447,
+                  "charLength": 13,
+                  "snippet": {
+                    "text": "malloc (size)",
+                    "rendered": {
+                      "text": "malloc (size)",
+                      "markdown": "`malloc (size)`"
+                    }
+                  },
+                  "sourceLanguage": "c"
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "glog-pfp-ruleFileLineCode/v1": "2ca4402f112556f8b1a3ad4e358a12a10e88a8125f0db6645af47d010bd8e291",
+            "glog-pfp-ruleFileCode/v1": "3768f9b7b8f07031ed4244f1a5f0300cf6826b577c8c971b44221b29fd70723d"
+          },
+          "fingerprints": {
+            "glog-fp-ruleFileCode/v1": "3768f9b7b8f07031ed4244f1a5f0300cf6826b577c8c971b44221b29fd70723d"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "If the value provided to malloc is the result of unsafe integer math, it can result in an exploitable condition. "
+              },
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "fuzzgoatNoVulns.c"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "charOffset": 2447,
+                        "charLength": 13
+                      },
+                      "insertedContent": {
+                        "text": "calloc(<number of elements>, <size of each element>)"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "DevSkimSeverity": "BestPractice",
+            "DevSkimConfidence": "High",
+            "tags": [
+              "API.DangerousAPI.ProblematicFunction"
+            ]
+          }
+        },
+        {
+          "ruleId": "2352e861-d814-3b7d-a6e6-181bbe9189d9",
+          "kind": "fail",
+          "level": "note",
+          "message": {
+            "text": "Problematic C function detected (memcpy)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "fuzzgoatNoVulns.c"
+                },
+                "region": {
+                  "startLine": 247,
+                  "startColumn": 3,
+                  "endLine": 247,
+                  "endColumn": 60,
+                  "charOffset": 6556,
+                  "charLength": 57,
+                  "snippet": {
+                    "text": "memcpy (&state.settings, settings, sizeof (json_settings)",
+                    "rendered": {
+                      "text": "memcpy (&state.settings, settings, sizeof (json_settings)",
+                      "markdown": "`memcpy (&state.settings, settings, sizeof (json_settings)`"
+                    }
+                  },
+                  "sourceLanguage": "c"
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "glog-pfp-ruleFileLineCode/v1": "4cb524046d2ec26a4349276cd67c6ed3c366f001e823978f3f15fdd0eebc8bb8",
+            "glog-pfp-ruleFileCode/v1": "b86d6f433ee1545b3995df2da13220af22ce650c3e37b87d5ab0850d20595160"
+          },
+          "fingerprints": {
+            "glog-fp-ruleFileCode/v1": "b86d6f433ee1545b3995df2da13220af22ce650c3e37b87d5ab0850d20595160"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "There are a number of conditions in which memcpy can introduce a vulnerability (mismatched buffer sizes, null pointers, etc.). More secure alternitives perform additional validation of the source and destination buffer"
+              },
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "fuzzgoatNoVulns.c"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "charOffset": 6556,
+                        "charLength": 57
+                      },
+                      "insertedContent": {
+                        "text": "memcpy_s(&state.settings, <size of &state.settings>,  settings,  sizeof (json_settings)"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "DevSkimSeverity": "BestPractice",
+            "DevSkimConfidence": "High",
+            "tags": [
+              "API.DangerousAPI.ProblematicFunction"
+            ]
+          }
+        },
+        {
+          "ruleId": "a46cb5d6-95f9-3c03-8cf2-d394290218e4",
+          "kind": "fail",
+          "level": "note",
+          "message": {
+            "text": "Problematic C function detected (memcpy)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "fuzzgoat.c"
+                },
+                "region": {
+                  "startLine": 368,
+                  "startColumn": 3,
+                  "endLine": 368,
+                  "endColumn": 60,
+                  "charOffset": 10462,
+                  "charLength": 57,
+                  "snippet": {
+                    "text": "memcpy (&state.settings, settings, sizeof (json_settings)",
+                    "rendered": {
+                      "text": "memcpy (&state.settings, settings, sizeof (json_settings)",
+                      "markdown": "`memcpy (&state.settings, settings, sizeof (json_settings)`"
+                    }
+                  },
+                  "sourceLanguage": "c"
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "glog-pfp-ruleFileLineCode/v1": "370b1d36307495ab481a6575cfc8a5f9222cf423b699f869908a6fcf2087fe4f",
+            "glog-pfp-ruleFileCode/v1": "3e202940bc12969248c9c06fc4cefc0171e31f852f459261831e3428b89c3cee"
+          },
+          "fingerprints": {
+            "glog-fp-ruleFileCode/v1": "3e202940bc12969248c9c06fc4cefc0171e31f852f459261831e3428b89c3cee"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "There are a number of conditions in which memcpy can introduce a vulnerability (mismatched buffer sizes, null pointers, etc.). More secure alternitives perform additional validation of the source and destination buffer"
+              },
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "fuzzgoat.c"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "charOffset": 10462,
+                        "charLength": 57
+                      },
+                      "insertedContent": {
+                        "text": "memcpy_s(&state.settings, <size of &state.settings>,  settings,  sizeof (json_settings)"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "DevSkimSeverity": "BestPractice",
+            "DevSkimConfidence": "High",
+            "tags": [
+              "API.DangerousAPI.ProblematicFunction"
+            ]
+          }
+        },
+        {
+          "ruleId": "415e9bb0-f5f6-3ff2-ae7f-b1ce7db60052",
+          "kind": "fail",
+          "level": "note",
+          "message": {
+            "text": "Problematic C function detected (malloc)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "fuzzgoat.c"
+                },
+                "region": {
+                  "startLine": 80,
+                  "startColumn": 36,
+                  "endLine": 80,
+                  "endColumn": 49,
+                  "charOffset": 2447,
+                  "charLength": 13,
+                  "snippet": {
+                    "text": "malloc (size)",
+                    "rendered": {
+                      "text": "malloc (size)",
+                      "markdown": "`malloc (size)`"
+                    }
+                  },
+                  "sourceLanguage": "c"
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "glog-pfp-ruleFileLineCode/v1": "30375a69d633341de58b58b1a2f36368c8f4ed7109b34d4937a2106bec1c802b",
+            "glog-pfp-ruleFileCode/v1": "9d8c1c66e6d54b34caee603e0777d2c26fab90792640388527c81d552555cc29"
+          },
+          "fingerprints": {
+            "glog-fp-ruleFileCode/v1": "9d8c1c66e6d54b34caee603e0777d2c26fab90792640388527c81d552555cc29"
+          },
+          "fixes": [
+            {
+              "description": {
+                "text": "If the value provided to malloc is the result of unsafe integer math, it can result in an exploitable condition. "
+              },
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "fuzzgoat.c"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "charOffset": 2447,
+                        "charLength": 13
+                      },
+                      "insertedContent": {
+                        "text": "calloc(<number of elements>, <size of each element>)"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "DevSkimSeverity": "BestPractice",
+            "DevSkimConfidence": "High",
+            "tags": [
+              "API.DangerousAPI.ProblematicFunction"
+            ]
+          }
+        }
+      ],
+      "newlineSequences": [
+        "\r\n",
+        "\n"
+      ]
+    }
+  ]
+}
